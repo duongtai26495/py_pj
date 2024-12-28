@@ -1,8 +1,10 @@
 from zk import ZK, const
 import pandas as pd
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import gspread
+import os
 from oauth2client.service_account import ServiceAccountCredentials
+from dateutil.relativedelta import relativedelta 
 
 def upload_to_google_sheet(df, file_id, sheet_name):
     # Đăng nhập và kết nối tới Google Sheets API
@@ -23,6 +25,7 @@ def upload_to_google_sheet(df, file_id, sheet_name):
     # Ghi dữ liệu vào sheet mới
     try:
         worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+        os.system('cls')
         print(f"Dữ liệu đã được ghi vào sheet {sheet_name} trong file Google Sheets.")
     except Exception as e:
         raise Exception(f"Lỗi khi ghi dữ liệu vào sheet: {e}")
@@ -51,13 +54,13 @@ def upload_to_google_sheet(df, file_id, sheet_name):
             }} for index, sheet_id in enumerate(reordered_ids)]
         })
 
-        print(f"Đã đặt sheet {sheet_name} lên đầu tiên.")
+        # print(f"Đã đặt sheet {sheet_name} lên đầu tiên.")
     except Exception as e:
         raise Exception(f"Lỗi khi sắp xếp lại sheet: {e}")
 
     # Trả về link Google Sheet
     sheet_link = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-    print(f"File Google Sheet đã được cập nhật: {sheet_link}")
+    print(f"Dữ liệu đã được đồng bộ thành công từ ngày 27 tháng trước đến hôm nay.")
     return sheet_link
 
 # Kết nối tới máy chấm công và xử lý dữ liệu
@@ -74,11 +77,12 @@ try:
     if attendance:
         records = []
 
-        start_time = time(4, 0)
-        end_time = time(23, 0)
+        start_time = time(1, 0)
+        end_time = time(23, 59)
 
-        start_date = datetime.strptime("2024-12-01", "%Y-%m-%d")
-        end_date = datetime.strptime("2024-12-06", "%Y-%m-%d")
+        today = datetime.now()
+        start_date = (today.replace(day=1) - relativedelta(months=1)).replace(day=27)
+        end_date = today + timedelta(days=1)
         for record in attendance:
             record_time = record.timestamp
             if start_date <= record_time <= end_date and start_time <= record_time.time() <= end_time:
@@ -104,14 +108,14 @@ try:
         df_pivot = df_pivot.drop(columns=["UniqueID"])
 
         df_pivot = df_pivot.reindex(columns=["User ID"] + sorted(df["Date"].unique()))
-        print(f'Đang ghi dữ liệu vào file')
+        # print(f'Đang ghi dữ liệu vào file')
 
         # Lưu file Excel
         now = datetime.now()
-        timestamp = now.strftime("%Y%m%d_%H%M%S")  
+        timestamp = now.strftime("%H%M%S")
         file_name = f"Data_cham_cong_{timestamp}.xlsx"
         # df_pivot.to_excel(file_name, index=False)
-        print(f"Dữ liệu đã được ghi vào file Excel: {file_name}")
+        # print(f"Dữ liệu đã được ghi vào file Excel: {file_name}")
 
         # Đưa dữ liệu lên Google Sheet
         # Xử lý NaN trong DataFrame
@@ -119,10 +123,11 @@ try:
         
         # Đưa dữ liệu lên Google Sheets
         # ID của file Google Sheet đã có sẵn
-        file_id = "1Z_eAq_5MshvWG1Ri_IbKlqFVuswhJTlHgJrN0nKrx64"  # Thay "YOUR_EXISTING_GOOGLE_SHEET_FILE_ID" bằng ID của file
+        file_id = "1Z_eAq_5MshvWG1Ri_IbKlqFVuswhJTlHgJrN0nKrx64" 
 
         # Tạo tên sheet với thời gian hiện tại
-        sheet_name = f"Data_{start_date}_{end_date}_{timestamp}"
+        sheet_name = f"Data_{start_date.strftime('%d-%m')}_{today.strftime('%d-%m')}_{timestamp}"
+
         upload_to_google_sheet(df_pivot, file_id, sheet_name)
 
     else:
@@ -140,3 +145,5 @@ finally:
         print("Đã ngắt kết nối với máy chấm công.")
     else:
         print("Đã ngắt kết nối thành công.")
+
+input("Nhấn Enter để thoát...")

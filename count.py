@@ -16,8 +16,8 @@ try:
     if attendance:
         records = []
 
-        start_time = time(7, 0)
-        end_time = time(18, 0)
+        start_time = time(1, 0)
+        end_time = time(23, 59)
 
         start_date = datetime.strptime("2024-12-01", "%Y-%m-%d")
         end_date = datetime.strptime("2024-12-05", "%Y-%m-%d")
@@ -30,31 +30,6 @@ try:
                 time_str = record_time.strftime("%H:%M:%S")
                 print(f'Dữ liệu: {record}')
 
-                records.append({
-                    "User ID": user_id,
-                    "Date": date_str,
-                    "Time": time_str
-                })
-        df = pd.DataFrame(records)
-
-        # Thêm cột định danh duy nhất cho mỗi lần chấm công
-        df["UniqueID"] = df.groupby(["User ID", "Date"]).cumcount() + 1
-
-        # Pivot dữ liệu với mỗi lần chấm công là một dòng riêng biệt
-        df_pivot = df.pivot(index=["User ID", "UniqueID"], columns="Date", values="Time").reset_index()
-
-        # Loại bỏ cột UniqueID nếu không cần hiển thị
-        df_pivot = df_pivot.drop(columns=["UniqueID"])
-
-        df_pivot = df_pivot.reindex(columns=["User ID"] + sorted(df["Date"].unique()))
-        print(f'Đang ghi dữ liệu vào file')
-      
-        now = datetime.now()
-        timestamp = now.strftime("%Y%m%d_%H%M%S")  
-        file_name = f"Data_cham_cong_{timestamp}.xlsx"
-
-        df_pivot.to_excel(file_name, index=False)
-        print(f"Dữ liệu đã được ghi vào file Excel: {file_name}")
     else:
         print("Không có dữ liệu chấm công nào.")
 
