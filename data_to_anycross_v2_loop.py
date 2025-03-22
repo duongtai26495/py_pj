@@ -17,153 +17,111 @@ stop_event = threading.Event()
 
 
 
-def send_to_api(row):
+def send_batch_to_api(data, length, url):
     try:
-        api_url = api_url_var.get()
-        response = requests.post(api_url, json=row)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
-    except Exception as e:
-        return False
-    
-def send_batch_to_api(batch):
-    try:
-        api_url = api_url_var.get()
-        response = requests.post(api_url, json=batch)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
+        response = requests.post(url, json={'data': data, 'length': length})
+        return response.status_code == 200
     except Exception as e:
         return False
 
 def download_data(log_box):
     zk = ZK(ip_var.get(), port=port_var.get(), timeout=15)
+    conn = None
     try:
+        # Kết nối tới máy chấm công
         if log_box.winfo_exists():
-            log_box.insert(tk.END, "\n\u2022 Đang kết nối tới máy chấm công...")
+            log_box.insert(tk.END, "\n• Đang kết nối tới máy chấm công...")
             log_box.update()
         conn = zk.connect()
         if log_box.winfo_exists():
-            log_box.insert(tk.END, "\n\u2022 Kết nối thành công!")
+            log_box.insert(tk.END, "\n• Kết nối thành công!")
             log_box.update()
 
+        # Lấy attendance và danh sách user
         attendance = conn.get_attendance()
+        users = conn.get_users()
+
+        # Tạo dict lưu attendance theo cặp (user_id, ngày) – chỉ dùng để phân nhóm
+        # key: (uid, date_str), value: set(mốc thời gian định dạng "YYYY-MM-DD HH:MM")
+        records = {}
+        # Lưu user có dữ liệu để xác định nếu không có data thì chỉ tạo 1 row trống
+        user_has_data = set()
+
         if attendance:
-            records = {}
             for record in attendance:
                 if stop_event.is_set():
                     break
                 if start_date <= record.timestamp <= end_date:
-                    user_id = record.user_id
-                    date_key = record.timestamp.strftime("%Y-%m-%d")
+                    uid = record.user_id
+                    # Dùng date_str để nhóm theo ngày (mặc dù sau này không đưa vào payload)
+                    date_str = record.timestamp.strftime("%Y-%m-%d")
+                    key = (uid, date_str)
                     time_str = record.timestamp.strftime("%Y-%m-%d %H:%M")
-                    if date_key not in records:
-                        records[date_key] = {}
-                    if user_id not in records[date_key]:
-                        records[date_key][user_id] = []
-                    records[date_key][user_id].append(time_str)
+                    records.setdefault(key, set()).add(time_str)
+                    user_has_data.add(uid)
 
-            rows = []
-            for date, users in records.items():
-                for user_id, timestamps in users.items():
-                    # Lấy tối đa 6 lần chấm công (nếu có)
-                    timestamps = sorted(timestamps)[:6]
-                    row = [user_id] + timestamps
+        # Tạo danh sách rows
+        rows = []
+        for user in users:
+            uid = user.user_id
+            # Nếu user có data, tạo 1 row cho mỗi ngày có data
+            keys = [key for key in records if key[0] == uid]
+            if keys:
+                # Sắp xếp theo ngày (mặc dù không dùng hiển thị)
+                for key in sorted(keys, key=lambda k: k[1]):
+                    times = sorted(list(records[key]))[:6]
+                    # Row gồm: [ID, Time1, Time2, ..., Time6]
+                    row = [uid] + times
+                    if len(times) < 6:
+                        row += [''] * (6 - len(times))
                     rows.append(row)
-
-            total_rows = len(rows)
-            if total_rows > 400:
-
-                batch_size = 400
-                batch = []
-                sent_count = 0
-                for index, row in enumerate(rows):
-                    if stop_event.is_set():
-                        break
-                    if len(row) < 7:
-                        row.extend([''] * (7 - len(row)))
-                    data_obj = {
-                        "ID": int(row[0]),
-                        "Time1": row[1] if len(row) > 1 else '',
-                        "Time2": row[2] if len(row) > 2 else '',
-                        "Time3": row[3] if len(row) > 3 else '',
-                        "Time4": row[4] if len(row) > 4 else '',
-                        "Time5": row[5] if len(row) > 5 else '',
-                        "Time6": row[6] if len(row) > 6 else ''
-                    }
-                    batch.append(data_obj)
-
-                    if len(batch) == batch_size:
-                        success = send_batch_to_api(batch)
-                        if not success:
-                            if log_box.winfo_exists():
-                                for item in batch:
-                                    log_box.insert(tk.END, f"\n\u2022 Gửi dữ liệu của {item['ID']} thất bại.")
-                                    log_box.update()
-                        sent_count += len(batch)
-                        percentage = (sent_count / total_rows) * 100
-                        log_box.insert(tk.END, f"\n\u2022 Đã gửi {percentage:.2f}% - {sent_count}/{total_rows}")
-                        log_box.update()
-                        batch = [] 
-                        time.sleep(2) 
-                        log_box.yview_moveto(1)
-
-                # Gửi phần dư nếu có
-                if batch:
-                    success = send_batch_to_api(batch)
-                    if not success:
-                        if log_box.winfo_exists():
-                            for item in batch:
-                                log_box.insert(tk.END, f"\n\u2022 Gửi dữ liệu của {item['ID']} thất bại.")
-                                log_box.update()
-                    sent_count += len(batch)
-                    percentage = (sent_count / total_rows) * 100
-                    log_box.insert(tk.END, f"\n\u2022 Đã gửi {percentage:.2f}% - {sent_count}/{total_rows}")
-                    log_box.update()
             else:
-                # Nếu số dữ liệu dưới 500, gửi 1 lần và hiển thị trên màn hình
-                batch = []
-                for row in rows:
-                    if stop_event.is_set():
-                        break
-                    if len(row) < 7:
-                        row.extend([''] * (7 - len(row)))
-                    data_obj = {
-                        "ID": int(row[0]),
-                        "Time1": row[1] if len(row) > 1 else '',
-                        "Time2": row[2] if len(row) > 2 else '',
-                        "Time3": row[3] if len(row) > 3 else '',
-                        "Time4": row[4] if len(row) > 4 else '',
-                        "Time5": row[5] if len(row) > 5 else '',
-                        "Time6": row[6] if len(row) > 6 else ''
-                    }
-                    batch.append(data_obj)
-                success = send_batch_to_api(batch)
-                if not success:
-                    if log_box.winfo_exists():
-                        for item in batch:
-                            log_box.insert(tk.END, f"\n\u2022 Gửi dữ liệu của {item['ID']} thất bại.")
-                            log_box.update()
-                log_box.insert(tk.END, f"\n\u2022 Đã gửi 100.00% - {len(batch)}/{len(batch)}")
-                log_box.update()
+                # User không có data, chỉ tạo duy nhất 1 row trống
+                rows.append([uid] + [''] * 6)
 
-            adjusted_end_date = end_date - relativedelta(days=1)
-            log_box.insert(
-                tk.END,
-                f"\n\u2022 Quá trình xử lý hoàn tất.\nĐã tải dữ liệu từ {start_date.strftime('%d/%m/%Y')} đến {adjusted_end_date.strftime('%d/%m/%Y')} lên base."
-            )
+        # Tạo payload: mỗi row có 7 trường
+        batch = []
+        for row in rows:
+            data_obj = {
+                "ID": row[0],
+                "Time1": row[1],
+                "Time2": row[2],
+                "Time3": row[3],
+                "Time4": row[4],
+                "Time5": row[5],
+                "Time6": row[6]
+            }
+            batch.append(data_obj)
+
+        total = len(batch)
+        # Nếu cần chia payload theo batch (ở đây payload vẫn được bọc trong key "data1")
+        if total > 1000:
+            payload = {}
+            for i in range(0, total, 1000):
+                batch_index = i // 1000 + 1
+                payload[f"data{batch_index}"] = batch[i:i+1000]
         else:
-            log_box.insert(tk.END, "\n\u2022 Không có dữ liệu chấm công nào.")
+            payload = {"data1": batch}
 
-        conn.disconnect()
+        success = send_batch_to_api(payload, total, api_url_var.get())
+        if success:
+            log_box.insert(tk.END, f"\n• Đã gửi {total} bản ghi thành công.")
+        else:
+            log_box.insert(tk.END, "\n• Gửi dữ liệu thất bại.")
+
+        adjusted_end_date = end_date - relativedelta(days=1)
+        log_box.insert(
+            tk.END,
+            f"\n• Xử lý hoàn tất. Đã tải dữ liệu từ {start_date.strftime('%d/%m/%Y')} đến {adjusted_end_date.strftime('%d/%m/%Y')}."
+        )
+        log_box.update()
+
     except Exception as e:
-        log_box.insert(tk.END, f"\n\u2022 Đã xảy ra lỗi: {e}")
+        log_box.insert(tk.END, f"\n• Đã xảy ra lỗi: {e}")
     finally:
         if conn and conn.is_connect:
             conn.disconnect()
+
 
 
 def on_date_select(event, start_date_cal, end_date_cal):
@@ -314,7 +272,7 @@ port_var = tk.IntVar()
 api_url_var = tk.StringVar()
 ip_var.set("172.16.17.106")
 port_var.set(4370)
-api_url_var.set("https://open-sg.larksuite.com/anycross/trigger/callback/MDcyOWY1ZjgyMThmNTBhYWM2NWUyMzZkNGM3NWJkMjZm") 
+api_url_var.set("https://open-sg.larksuite.com/anycross/trigger/callback/MDFiOGNkYjU3M2YxMWNkM2RlODlmOWY3OGZmYjE3N2Yw") 
 
 setup_frame = ttk.Frame(root)
 setup_frame.grid(row=6, column=0, columnspan=4, padx=10, pady=10)

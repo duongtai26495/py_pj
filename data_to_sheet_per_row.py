@@ -70,7 +70,7 @@ def download_data(log_box):
             end_date = datetime.now() + relativedelta(days=1)
 
             for record in attendance:
-                
+                print(record)
                 log_box.insert(tk.END, f"\n\u2022 Đang tải dữ liệu {record}")
                 if start_date <= record.timestamp <= end_date:
                     user_id = record.user_id
