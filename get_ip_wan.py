@@ -38,8 +38,10 @@ def startup():
     if ip:
         send_ip(ip, True)
 
-schedule.every().day.at("08:00").do(job)
-schedule.every().day.at("20:00").do(job)
+schedule.every().day.at("07:45").do(job)
+schedule.every().day.at("13:45").do(job)
+schedule.every().day.at("17:30").do(job)
+schedule.every().day.at("19:45").do(job)
 
 startup()
 

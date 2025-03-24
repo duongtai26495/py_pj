@@ -8,13 +8,17 @@ from zk import ZK
 API_URL = "https://open-sg.larksuite.com/anycross/trigger/callback/NTdmNzhjM2MzZjNjZjBmMTVhOWFmMWNmN2QwOGUwMDkw"
 API_URL_MONTHLY = "https://open-sg.larksuite.com/anycross/trigger/callback/YTA4MzYxNGQyNGI3ZDUxNjBiNjQ5OGIxNTFiMTc5MzYw"
 LARKBOT_URL = 'https://open.larksuite.com/open-apis/bot/v2/hook/992413a8-ee5f-4a62-8742-aca039cf5263'
+
 # Máy chấm công nguồn 1 (cấu hình từ giao diện)
 IP = "172.16.17.106"
 PORT = 4370
-# Máy chấm công nguồn 2 (IP cố định với tiền tố "NT")
-SECOND_IP = "14.179.55.199"
+# Máy chấm công nguồn 2 mặc định (sẽ cập nhật từ API)
+DEFAULT_SECOND_IP = "14.179.55.199"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
+
+# Địa chỉ API cung cấp second ip, bạn thay đổi theo endpoint thực tế của bạn
+SECOND_IP_API = "https://bthfapiservices-production.up.railway.app/api/get_ip_nt"
 
 def send_notify(message):
     payload = {
@@ -40,6 +44,22 @@ def send_batch_to_api(batch, url):
         print(f"Lỗi khi gửi batch: {e}")
         return False
 
+def get_second_ip():
+
+    try:
+        response = requests.get(SECOND_IP_API, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            second_ip = data.get("ip", DEFAULT_SECOND_IP)
+            send_notify(f"Lấy second ip thành công: {second_ip}")
+            return second_ip
+        else:
+            send_notify(f"Lỗi khi lấy second ip, mã lỗi: {response.status_code}. Sử dụng mặc định.")
+            return DEFAULT_SECOND_IP
+    except Exception as e:
+        send_notify(f"Lỗi khi lấy second ip: {e}. Sử dụng mặc định.")
+        return DEFAULT_SECOND_IP
+
 def get_data_from_device(ip, port, prefix=""):
     zk = ZK(ip, port, timeout=15, ommit_ping=True)
     conn = None
@@ -63,14 +83,16 @@ def get_data_from_device(ip, port, prefix=""):
             send_notify(f"Đã ngắt kết nối máy {ip}:{port}")
 
 def download_data_bg_combined(start_date, end_date, url, step):
-    send_notify(f"Đang kết nối tới máy chấm công {IP}:{PORT} và {SECOND_IP}:{SECOND_PORT}...")
+    # Lấy second ip từ API của bạn
+    second_ip = get_second_ip()
+    send_notify(f"Đang kết nối tới máy chấm công {IP}:{PORT} và {second_ip}:{SECOND_PORT}...")
     # Lấy dữ liệu từ nguồn 1 và nguồn 2
     attendance1, users1 = get_data_from_device(IP, PORT, prefix="")
-    attendance2, users2 = get_data_from_device(SECOND_IP, SECOND_PORT, prefix=SECOND_PREFIX)
+    attendance2, users2 = get_data_from_device(second_ip, SECOND_PORT, prefix=SECOND_PREFIX)
     
     # Gộp chung attendance từ 2 nguồn
     attendance = attendance1 + attendance2
-    # Gộp chung danh sách user, không gộp chung nếu có cùng underlying id
+    # Gộp chung danh sách user, giữ riêng dữ liệu từ mỗi nguồn (không gộp theo underlying id)
     combined_users = users1 + users2
     
     # Tạo dict lưu attendance theo cặp (user_id, ngày)
@@ -112,10 +134,8 @@ def download_data_bg_combined(start_date, end_date, url, step):
             "Time4": row[4],
             "Time5": row[5],
             "Time6": row[6],
-            "Step":step
+            "Step": step
         }
-        if step != "0":
-            data_obj["Step"] = step
         batch_data.append(data_obj)
         
     total_rows = len(batch_data)
