@@ -4,6 +4,8 @@ import threading
 import requests
 from datetime import datetime, timedelta
 from zk import ZK
+from win10toast import ToastNotifier
+
 
 API_URL = "https://open-sg.larksuite.com/anycross/trigger/callback/NTdmNzhjM2MzZjNjZjBmMTVhOWFmMWNmN2QwOGUwMDkw"
 API_URL_MONTHLY = "https://open-sg.larksuite.com/anycross/trigger/callback/YTA4MzYxNGQyNGI3ZDUxNjBiNjQ5OGIxNTFiMTc5MzYw"
@@ -194,7 +196,22 @@ def job(target_hour):
     send_notify(f"Lấy dữ liệu đến {target_hour}h hôm nay.")
     download_data_bg_combined(start_date, end_date, url, step)
 
+
+def show_startup_notification():
+    toaster = ToastNotifier()
+    toaster.show_toast(
+        "Chương trình lấy chấm công",
+        "Ứng dụng đã được khởi động",
+        icon_path="logo.ico",  # Đường dẫn tới file icon
+        duration=5,            # Thời gian hiển thị (giây)
+        threaded=True
+    )
+    # Đợi cho đến khi thông báo hiển thị xong (nếu cần)
+    while toaster.notification_active():
+        time.sleep(0.1)
+
 def main():
+    show_startup_notification()
     send_notify("Chương trình lấy chấm công đã được khởi động")
     # Đặt lịch cho mọi thời điểm đều lấy dữ liệu từ 2 nguồn
     schedule.every().day.at("09:00").do(lambda: job(9))
