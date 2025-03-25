@@ -16,12 +16,38 @@ from tkinter import ttk
 is_running = False
 stop_event = threading.Event()
 
+DEFAULT_SECOND_IP = "14.179.55.199"
+SECOND_PORT = 4370
+SECOND_PREFIX = "NT"
+SECOND_IP_API = "https://bthfapiservices-production.up.railway.app/api/get_ip_nt"
+
 def send_batch_to_api(data, length, url):
     try:
         response = requests.post(url, json={'data': data, 'length': length})
         return response.status_code == 200
     except Exception as e:
         return False
+def get_second_ip():
+
+    try:
+        response = requests.get(SECOND_IP_API, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            second_ip = data.get("ip", DEFAULT_SECOND_IP)
+            if log_box.winfo_exists():
+                log_box.insert(tk.END, f"\n• Đã lấy thành công IP {second_ip}")
+                log_box.update()
+            return second_ip
+        else:
+            if log_box.winfo_exists():
+                log_box.insert(tk.END, f"\n• Lấy IP mới không thành công. Sử dụng mặc định")
+                log_box.update()
+            return DEFAULT_SECOND_IP
+    except Exception as e:
+        if log_box.winfo_exists():
+            log_box.insert(tk.END, f"Lỗi khi lấy second ip: {e}. Sử dụng mặc định.")
+            log_box.update()
+        return DEFAULT_SECOND_IP
 
 def get_data_from_device(ip, port, prefix=""):
     """Kết nối và lấy dữ liệu từ một máy chấm công, thêm tiền tố cho user_id nếu cần."""
@@ -55,10 +81,11 @@ def get_data_from_device(ip, port, prefix=""):
             conn.disconnect()
 
 def download_data(log_box):
+    second_ip = get_second_ip()
     # Lấy dữ liệu từ nguồn 1 (được cấu hình trong giao diện)
     attendance1, users1 = get_data_from_device(ip_var.get(), port_var.get(), prefix="")
     # Lấy dữ liệu từ nguồn 2 (ip cố định và thêm tiền tố "NT")
-    attendance2, users2 = get_data_from_device("14.179.55.199", 4370, prefix="NT")
+    attendance2, users2 = get_data_from_device(second_ip, SECOND_PORT, prefix=SECOND_PREFIX)
 
     # Gom tất cả attendance và hợp nhất danh sách user (loại bỏ trùng lặp nếu có)
     attendance = attendance1 + attendance2
@@ -66,9 +93,6 @@ def download_data(log_box):
 
     # Tạo dict lưu attendance theo cặp (user_id, ngày) – dùng để phân nhóm
     records = {}
-    # Lưu user có dữ liệu để xác định nếu không có data thì chỉ tạo 1 row trống
-    user_has_data = set()
-
     if attendance:
         for record in attendance:
             if stop_event.is_set():
@@ -80,24 +104,26 @@ def download_data(log_box):
                 key = (uid, date_str)
                 time_str = record.timestamp.strftime("%Y-%m-%d %H:%M")
                 records.setdefault(key, set()).add(time_str)
-                user_has_data.add(uid)
 
-    # Tạo danh sách rows
+    # Tạo danh sách rows: mỗi user sẽ có 1 dòng cho mỗi ngày trong khoảng từ start_date đến end_date-1
     rows = []
+    current_date = start_date.date()
+    # Vì end_date đã được cộng thêm 1 ngày, ta trừ đi 1 để lấy ngày kết thúc chính xác
+    end_date_only = (end_date - relativedelta(days=1)).date()
     for user in combined_users:
         uid = user.user_id
-        # Nếu user có dữ liệu, tạo row cho mỗi ngày có data
-        keys = [key for key in records if key[0] == uid]
-        if keys:
-            for key in sorted(keys, key=lambda k: k[1]):
+        current_day = current_date
+        while current_day <= end_date_only:
+            key = (uid, current_day.strftime("%Y-%m-%d"))
+            if key in records:
                 times = sorted(list(records[key]))[:6]
-                row = [uid] + times
-                if len(times) < 6:
-                    row += [''] * (6 - len(times))
-                rows.append(row)
-        else:
-            # User không có data, tạo 1 row trống
-            rows.append([uid] + [''] * 6)
+            else:
+                times = []
+            row = [uid] + times
+            if len(times) < 6:
+                row += [''] * (6 - len(times))
+            rows.append(row)
+            current_day += timedelta(days=1)
 
     # Tạo payload: mỗi row gồm 7 trường
     batch = []
@@ -135,6 +161,7 @@ def download_data(log_box):
         f"\n• Xử lý hoàn tất. Đã tải dữ liệu từ {start_date.strftime('%d/%m/%Y')} đến {adjusted_end_date.strftime('%d/%m/%Y')}."
     )
     log_box.update()
+
 
 def on_date_select(event, start_date_cal, end_date_cal):
     global start_date, end_date
@@ -277,7 +304,7 @@ port_entry.grid(row=6, column=1, padx=5, pady=5)
 
 info_frame = ttk.Frame(root)
 info_frame.grid(row=7, column=0, columnspan=4, padx=10, pady=10)
-info_label = ttk.Label(info_frame, text="Kai © Bình Thuận Ford 2025", font=("Arial", 9))
+info_label = ttk.Label(info_frame, text="Kai © v3.0.0", font=("Arial", 9))
 info_label.grid(row=0, column=0, padx=5)
 
 # Ẩn các trường nhập cấu hình mặc định
