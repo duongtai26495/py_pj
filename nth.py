@@ -1,7 +1,5 @@
-from zk import ZK, const
-import csv
+from zk import ZK
 from datetime import datetime, timedelta
-import os
 import requests
 
 
@@ -13,7 +11,6 @@ def get_second_ip():
         if response.status_code == 200:
             data = response.json()
             second_ip = data.get("ip", "DEFAULT_SECOND_IP")
-            print(second_ip)
             return second_ip
        
     except Exception as e:
@@ -23,7 +20,7 @@ def get_second_ip():
 def connect_device(port, start_date, end_date):
     second_ip = get_second_ip()
     print(f"Đang kết nối: {second_ip}")
-    zk = ZK("113.188.91.9", port=port, timeout=30, ommit_ping=True)
+    zk = ZK("113.188.91.9", port=port, timeout=15, ommit_ping=True)
     try:
         conn = zk.connect()
         print("Đã kết nối thành công với máy chấm công!")
