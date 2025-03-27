@@ -4,7 +4,9 @@ import threading
 import requests
 from datetime import datetime, timedelta
 from zk import ZK
-from win10toast import ToastNotifier
+from plyer import notification
+
+
 
 
 API_URL = "https://open-sg.larksuite.com/anycross/trigger/callback/NTdmNzhjM2MzZjNjZjBmMTVhOWFmMWNmN2QwOGUwMDkw"
@@ -198,17 +200,11 @@ def job(target_hour):
 
 
 def show_startup_notification():
-    toaster = ToastNotifier()
-    toaster.show_toast(
-        "Chương trình lấy chấm công",
-        "Ứng dụng đã được khởi động",
-        icon_path="logo.ico",  # Đường dẫn tới file icon
-        duration=5,            # Thời gian hiển thị (giây)
-        threaded=True
+   notification.notify(
+    title='BThFord - Daily Get Attendance',
+    message='Phần mềm đã được khởi động !'
     )
-    # Đợi cho đến khi thông báo hiển thị xong (nếu cần)
-    while toaster.notification_active():
-        time.sleep(0.1)
+
 
 def main():
     show_startup_notification()
