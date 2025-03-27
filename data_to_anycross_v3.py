@@ -19,7 +19,7 @@ stop_event = threading.Event()
 DEFAULT_SECOND_IP = "14.179.55.199"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
-SECOND_IP_API = "https://bthfapiservices-production.up.railway.app/api/get_ip_nt"
+SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
 
 def send_batch_to_api(data, length, url):
     try:
@@ -27,8 +27,8 @@ def send_batch_to_api(data, length, url):
         return response.status_code == 200
     except Exception as e:
         return False
-def get_second_ip():
 
+def get_second_ip():
     try:
         response = requests.get(SECOND_IP_API, timeout=10)
         if response.status_code == 200:
@@ -40,18 +40,18 @@ def get_second_ip():
             return second_ip
         else:
             if log_box.winfo_exists():
-                log_box.insert(tk.END, f"\n• Lấy IP mới không thành công. Sử dụng mặc định")
+                log_box.insert(tk.END, "\n• Lấy IP mới không thành công. Sử dụng mặc định")
                 log_box.update()
             return DEFAULT_SECOND_IP
     except Exception as e:
         if log_box.winfo_exists():
-            log_box.insert(tk.END, f"Lỗi khi lấy second ip: {e}. Sử dụng mặc định.")
+            log_box.insert(tk.END, f"\nLỗi khi lấy second ip: {e}. Sử dụng mặc định.")
             log_box.update()
         return DEFAULT_SECOND_IP
 
 def get_data_from_device(ip, port, prefix=""):
     """Kết nối và lấy dữ liệu từ một máy chấm công, thêm tiền tố cho user_id nếu cần."""
-    zk = ZK(ip, port, timeout=15, ommit_ping=True)
+    zk = ZK(ip, port, timeout=30, ommit_ping=True)
     conn = None
     attendance = []
     users = []
@@ -81,16 +81,30 @@ def get_data_from_device(ip, port, prefix=""):
             conn.disconnect()
 
 def download_data(log_box):
-    second_ip = get_second_ip()
-    # Lấy dữ liệu từ nguồn 1 (được cấu hình trong giao diện)
-    attendance1, users1 = get_data_from_device(ip_var.get(), port_var.get(), prefix="")
-    # Lấy dữ liệu từ nguồn 2 (ip cố định và thêm tiền tố "NT")
-    attendance2, users2 = get_data_from_device(second_ip, SECOND_PORT, prefix=SECOND_PREFIX)
-
-    # Gom tất cả attendance và hợp nhất danh sách user (loại bỏ trùng lặp nếu có)
-    attendance = attendance1 + attendance2
-    combined_users = {user.user_id: user for user in (users1 + users2)}.values()
-
+    # Lấy tùy chọn nguồn dữ liệu từ giao diện
+    data_source = data_source_var.get()  # Có thể là "BinhThuan", "NinhThuan" hoặc "Both"
+    attendance = []
+    combined_users = []
+    
+    if data_source == "BinhThuan":
+        # Lấy dữ liệu từ nguồn 1 (IP gốc)
+        attendance, users = get_data_from_device(ip_var.get(), port_var.get(), prefix="")
+        combined_users = users
+    elif data_source == "NinhThuan":
+        # Lấy dữ liệu từ nguồn 2 (second IP)
+        second_ip = get_second_ip()
+        attendance, users = get_data_from_device(second_ip, SECOND_PORT, prefix=SECOND_PREFIX)
+        combined_users = users
+    else:  # "Both"
+        second_ip = get_second_ip()
+        # Lấy dữ liệu từ nguồn 1 (IP gốc)
+        attendance1, users1 = get_data_from_device(ip_var.get(), port_var.get(), prefix="")
+        # Lấy dữ liệu từ nguồn 2 (second IP)
+        attendance2, users2 = get_data_from_device(second_ip, SECOND_PORT, prefix=SECOND_PREFIX)
+        attendance = attendance1 + attendance2
+        # Hợp nhất danh sách user (loại bỏ trùng lặp nếu có)
+        combined_users = {user.user_id: user for user in (users1 + users2)}.values()
+    
     # Tạo dict lưu attendance theo cặp (user_id, ngày) – dùng để phân nhóm
     records = {}
     if attendance:
@@ -162,7 +176,6 @@ def download_data(log_box):
     )
     log_box.update()
 
-
 def on_date_select(event, start_date_cal, end_date_cal):
     global start_date, end_date
     start_date_str = start_date_cal.get_date()
@@ -195,8 +208,16 @@ def start_process(log_box, time_label):
     is_running = True
     if log_box.winfo_exists():
         log_box.insert(tk.END, "\nBắt đầu xử lý... Vui lòng không thao tác gì thêm cho tới khi hoàn tất.")
+        # Hiển thị nguồn dữ liệu được chọn
+        selected_source = data_source_var.get()
+        if selected_source == "BinhThuan":
+            log_box.insert(tk.END, "\n\u2022 Đang tải dữ liệu từ Bình Thuận.")
+        elif selected_source == "NinhThuan":
+            log_box.insert(tk.END, "\n\u2022 Đang tải dữ liệu từ Ninh Thuận.")
+        else:
+            log_box.insert(tk.END, "\n\u2022 Đang tải dữ liệu từ cả hai nguồn: Bình Thuận và Ninh Thuận.")
         adjusted_end_date = end_date - relativedelta(days=1)
-        log_box.insert(tk.END, f"\n\u2022 Tải dữ liệu từ {start_date.strftime('%d/%m/%Y')} đến {adjusted_end_date.strftime('%d/%m/%Y')} về.")
+        log_box.insert(tk.END, f"\n\u2022 Dữ liệu từ {start_date.strftime('%d/%m/%Y')} đến {adjusted_end_date.strftime('%d/%m/%Y')}.")
         log_box.update()
     start_time = time.time()
     threading.Thread(target=update_timer, args=(start_time, time_label), daemon=True).start()
@@ -218,7 +239,7 @@ def toggle_details():
         port_label.grid_forget()
         detail_button.config(text="Thiết lập")  
     else:
-        setup_frame.grid(row=6, column=0, columnspan=4, padx=10, pady=10)
+        setup_frame.grid(row=7, column=0, columnspan=4, padx=10, pady=10)
         api_url_entry.grid(row=4, column=1, padx=5, pady=5)
         ip_entry.grid(row=5, column=1, padx=5, pady=5)
         port_entry.grid(row=6, column=1, padx=5, pady=5)
@@ -238,7 +259,7 @@ def on_close():
 root.protocol("WM_DELETE_WINDOW", on_close)
 root.title("Phần mềm tải lên dữ liệu chấm công (BThFord 2025)")
 root.update_idletasks() 
-root.minsize(600, 400) 
+root.minsize(600, 500) 
 
 log_box = ScrolledText(root, wrap=tk.WORD, font=("Arial", 12), fg="green", bg="#f7f7f7", height=10, bd=2, relief="sunken")
 log_box.grid(row=0, column=0, columnspan=4, padx=15, pady=10, sticky="nsew")
@@ -255,6 +276,19 @@ end_date_label = ttk.Label(frame, text="Ngày kết thúc:", font=("Arial", 12))
 end_date_label.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 end_date_cal = Calendar(frame, selectmode="day", date_pattern="mm/dd/yyyy", font=("Arial", 12), bd=2, relief="sunken")
 end_date_cal.grid(row=1, column=1, padx=5, pady=5)
+
+# Thêm khung lựa chọn nguồn dữ liệu
+source_frame = ttk.Frame(frame, padding="5")
+source_frame.grid(row=2, column=0, columnspan=2, pady=5, sticky="w")
+source_label = ttk.Label(source_frame, text="Chọn nguồn dữ liệu:", font=("Arial", 12))
+source_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+data_source_var = tk.StringVar(value="Both")  # Mặc định là lấy cả 2
+rb1 = ttk.Radiobutton(source_frame, text="Bình Thuận", variable=data_source_var, value="BinhThuan")
+rb1.grid(row=0, column=1, padx=5, pady=5)
+rb2 = ttk.Radiobutton(source_frame, text="Ninh Thuận", variable=data_source_var, value="NinhThuan")
+rb2.grid(row=0, column=2, padx=5, pady=5)
+rb3 = ttk.Radiobutton(source_frame, text="Tất cả", variable=data_source_var, value="Both")
+rb3.grid(row=0, column=3, padx=5, pady=5)
 
 # Khởi tạo ngày bắt đầu và ngày kết thúc
 start_date = (datetime.now().replace(day=1) - relativedelta(months=1)).replace(day=27)
@@ -287,7 +321,7 @@ port_var.set(4370)
 api_url_var.set("https://open-sg.larksuite.com/anycross/trigger/callback/MDFiOGNkYjU3M2YxMWNkM2RlODlmOWY3OGZmYjE3N2Yw") 
 
 setup_frame = ttk.Frame(root)
-setup_frame.grid(row=6, column=0, columnspan=4, padx=10, pady=10)
+setup_frame.grid(row=7, column=0, columnspan=4, padx=10, pady=10)
 # Nhãn và ô nhập cho API URL, IP, PORT
 api_url_label = ttk.Label(setup_frame, text="API URL:", font=("Arial", 12))
 api_url_label.grid(row=4, column=0, padx=5, pady=5, sticky="w")
@@ -303,8 +337,8 @@ port_entry = ttk.Entry(setup_frame, textvariable=port_var, font=("Arial", 12), w
 port_entry.grid(row=6, column=1, padx=5, pady=5)
 
 info_frame = ttk.Frame(root)
-info_frame.grid(row=7, column=0, columnspan=4, padx=10, pady=10)
-info_label = ttk.Label(info_frame, text="Kai © v3.0.0", font=("Arial", 9))
+info_frame.grid(row=8, column=0, columnspan=4, padx=10, pady=10)
+info_label = ttk.Label(info_frame, text="Kai © v3.1.1", font=("Arial", 9))
 info_label.grid(row=0, column=0, padx=5)
 
 # Ẩn các trường nhập cấu hình mặc định
@@ -334,5 +368,7 @@ root.grid_rowconfigure(6, weight=1)
 root.grid_columnconfigure(6, weight=1)
 root.grid_rowconfigure(7, weight=1)
 root.grid_columnconfigure(7, weight=1)
+root.grid_rowconfigure(8, weight=1)
+root.grid_columnconfigure(8, weight=1)
 
 root.mainloop()

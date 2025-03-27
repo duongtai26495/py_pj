@@ -2,9 +2,28 @@ from zk import ZK, const
 import csv
 from datetime import datetime, timedelta
 import os
+import requests
 
-def connect_device(ip, port, start_date, end_date):
-    zk = ZK(ip, port=port, timeout=20, ommit_ping=True)
+
+SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
+def get_second_ip():
+
+    try:
+        response = requests.get(SECOND_IP_API, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            second_ip = data.get("ip", "DEFAULT_SECOND_IP")
+            print(second_ip)
+            return second_ip
+       
+    except Exception as e:
+            return "Secon IP"
+    
+
+def connect_device(port, start_date, end_date):
+    second_ip = get_second_ip()
+    print(f"Đang kết nối: {second_ip}")
+    zk = ZK("113.188.91.9", port=port, timeout=30, ommit_ping=True)
     try:
         conn = zk.connect()
         print("Đã kết nối thành công với máy chấm công!")
@@ -73,4 +92,4 @@ port = 4370
 now = datetime.now()
 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
 end_date = (now + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
-connect_device(ip_address, port, start_date, end_date)
+connect_device(port, start_date, end_date)

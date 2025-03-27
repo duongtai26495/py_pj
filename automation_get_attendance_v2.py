@@ -20,7 +20,7 @@ SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
 
 # Địa chỉ API cung cấp second ip, bạn thay đổi theo endpoint thực tế của bạn
-SECOND_IP_API = "https://bthfapiservices-production.up.railway.app/api/get_ip_nt"
+SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
 
 def send_notify(message):
     payload = {

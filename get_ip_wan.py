@@ -13,9 +13,9 @@ def get_ip():
         return None
 
 def send_ip(ip, startup):
-    endpoint = 'https://bthfapiservices-production.up.railway.app/api/update_ip_nt'
+    endpoint = 'https://endpoint.binhthuanford.com/api/update_ip_nt'
     if startup:
-        endpoint = 'https://bthfapiservices-production.up.railway.app/api/send_check_notify'
+        endpoint = 'https://endpoint.binhthuanford.com/api/send_check_notify'
 
     payload = {'ip': ip}
     try:
@@ -33,17 +33,12 @@ def job():
         send_ip(ip, False)
 
 def startup():
-    print("Sending IP immediately after program starts...")
     ip = get_ip()
     if ip:
         send_ip(ip, True)
 
-schedule.every().day.at("07:45").do(job)
-schedule.every().day.at("13:45").do(job)
-schedule.every().day.at("17:30").do(job)
-schedule.every().day.at("19:45").do(job)
-
 startup()
+schedule.every(30).minutes.do(job)
 
 while True:
     schedule.run_pending()
