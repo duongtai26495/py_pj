@@ -8,7 +8,7 @@ from zk import ZK
 
 
 API_URL = "https://open-sg.larksuite.com/anycross/trigger/callback/NTdmNzhjM2MzZjNjZjBmMTVhOWFmMWNmN2QwOGUwMDkw"
-API_URL_MONTHLY = "https://open-sg.larksuite.com/anycross/trigger/callback/YTA4MzYxNGQyNGI3ZDUxNjBiNjQ5OGIxNTFiMTc5MzYw"
+API_URL_MONTHLY = "https://open-sg.larksuite.com/anycross/trigger/callback/MGVhNGJkZWU3MzIyZjI2MTg0YWE1NjIzM2M4NDk3YTU5"
 LARKBOT_URL = 'https://open.larksuite.com/open-apis/bot/v2/hook/992413a8-ee5f-4a62-8742-aca039cf5263'
 
 # Máy chấm công nguồn 1 (cấu hình từ giao diện)
@@ -187,6 +187,22 @@ def download_data_bg_combined(start_date, end_date, url, step):
         
     send_notify(f"Quá trình xử lý hoàn tất. Đã tải dữ liệu từ {start_date.strftime('%d/%m/%Y %H:%M')} đến {end_date.strftime('%d/%m/%Y %H:%M')} lên base.")
 
+def monthly_job():
+
+    now = datetime.now()
+    # Xác định ngày bắt đầu: nếu tháng hiện tại là 1 thì tháng trước là 12 của năm trước
+    if now.month == 1:
+        start_date = datetime(now.year - 1, 12, 28, 0, 0, 0)
+    else:
+        start_date = datetime(now.year, now.month - 1, 28, 0, 0, 0)
+        
+    # Ngày kết thúc: ngày hiện tại lùi lại 1 ngày (đặt thời gian đến 23:59)
+    end_date = (now - timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=0)
+    
+    step = "0"
+    send_notify(f"Lấy dữ liệu từ {start_date.strftime('%d/%m/%Y %H:%M')} đến {end_date.strftime('%d/%m/%Y %H:%M')}")
+    download_data_bg_combined(start_date, end_date, API_URL_MONTHLY, step)
+    
 def job(target_hour):
     """
     Lấy dữ liệu kết hợp từ 2 nguồn tại thời điểm target_hour.
@@ -217,11 +233,16 @@ def main():
     show_startup_notification()
     current_ip = get_ip()
     send_notify(f"Chương trình lấy chấm công đã được khởi động tại: {current_ip}")
+    
+    # Các trigger hiện có
     schedule.every().day.at("09:00").do(lambda: job(9))
     schedule.every().day.at("14:00").do(lambda: job(14))
     schedule.every().day.at("18:00").do(lambda: job(18))
     schedule.every().day.at("20:00").do(lambda: job(20))
-
+    
+    # Thêm trigger cho job monthly lúc 9:05
+    schedule.every().day.at("09:05").do(monthly_job)
+    
     while True:
         schedule.run_pending()
         time.sleep(1)

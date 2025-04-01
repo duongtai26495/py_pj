@@ -18,9 +18,9 @@ def get_second_ip():
     
 
 def connect_device(port, start_date, end_date):
-    second_ip = get_second_ip()
-    print(f"Đang kết nối: {second_ip}")
-    zk = ZK("113.188.91.9", port=port, timeout=15, ommit_ping=True)
+    # second_ip = get_second_ip()
+    print(f"Đang kết nối: 113.162.244.51 {port}")
+    zk = ZK("113.162.244.51", port=port, timeout=15, ommit_ping=True)
     try:
         conn = zk.connect()
         print("Đã kết nối thành công với máy chấm công!")
@@ -83,7 +83,7 @@ def connect_device(port, start_date, end_date):
 
 # Địa chỉ IP và cổng của máy chấm công
 ip_address = "14.179.55.199"
-port = 4370
+port = 24370
 
 
 now = datetime.now()
