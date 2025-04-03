@@ -1,30 +1,29 @@
 import time
 import schedule
-import threading
 from pync import Notifier
 import requests
 from datetime import datetime, timedelta
 from zk import ZK
 
-# URL API và base_token dùng chung
+
 API_URL = "https://open-sg.larksuite.com/anycross/trigger/callback/MDA3YjJlZTE0MGEzMDllZmY3YzVjNjI3M2RmZTgwYmVj"
 API_URL_MONTHLY = "https://open-sg.larksuite.com/anycross/trigger/callback/MGVhNGJkZWU3MzIyZjI2MTg0YWE1NjIzM2M4NDk3YTU5"
 LARKBOT_URL = 'https://open.larksuite.com/open-apis/bot/v2/hook/992413a8-ee5f-4a62-8742-aca039cf5263'
 BASE_TOKEN = "CeSDbFSWvaRjAgsmCWclZ0UEgpc"
 
-# Cấu hình table_id cho từng khoảng thời gian
-TABLE_ID_COMMON = "tblpoL5MDY8cbM3b"         # Dùng cho 9h, 14h, 18h (có step)
-TABLE_ID_20 = "tblIde0y5kgOeRXr"               # Dùng cho 20h (không có step)
-TABLE_ID_MONTHLY = "tbleADv6H7H0olJo"          # Dùng cho monthly job (không có step)
 
-# Cấu hình máy chấm công
+TABLE_ID_COMMON = "tblpoL5MDY8cbM3b"
+TABLE_ID_20 = "tblIde0y5kgOeRXr"
+TABLE_ID_MONTHLY = "tbleADv6H7H0olJo"
+
+
 IP = "172.16.17.106"
 PORT = 4370
 DEFAULT_SECOND_IP = "14.179.55.199"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
 
-# Endpoint lấy second ip
+
 SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
 
 def get_ip():
@@ -64,7 +63,7 @@ def send_batch_to_api(all_data, table_id, remove, common):
     }
     batch_size = 1000
     total = len(all_data)
-    num_batches = (total + batch_size - 1) // batch_size
+    num_batches = (total + batch_size - 1)
     for i in range(num_batches):
         start = i * batch_size
         end = start + batch_size
@@ -118,7 +117,7 @@ def get_data_from_device(ip, port, prefix=""):
                 send_notify(f"Lỗi khi ngắt kết nối máy {ip}:{port}: {e}")
 
 def download_data_bg_combined(start_date, end_date, step, table_id, remove, common):
-    # Lấy second ip từ API
+    
     second_ip = get_second_ip()
     send_notify(f"Đang kết nối tới máy chấm công {IP}:{PORT} và {second_ip}:{SECOND_PORT}...")
     
@@ -188,10 +187,10 @@ def monthly_job():
         start_date = datetime(now.year, now.month - 1, 28, 0, 0, 0)
     end_date = (now - timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=0)
     
-    step = None    # Monthly job không có step
+    step = None
     table_id = TABLE_ID_MONTHLY
     remove = 1
-    common = 0   # Monthly job không phải common
+    common = 0
     send_notify(f"Lấy dữ liệu từ {start_date.strftime('%d/%m/%Y %H:%M')} đến {end_date.strftime('%d/%m/%Y %H:%M')}")
     download_data_bg_combined(start_date, end_date, step, table_id, remove, common)
     
@@ -200,7 +199,7 @@ def job(target_hour):
     start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
     
-    # Với 9,14,18 giờ: có step và common=1; với 20 giờ: không có step và common=0.
+    
     if target_hour in [9, 14, 18]:
         step = {9: "1", 14: "2", 18: "3"}[target_hour]
         table_id = TABLE_ID_COMMON
@@ -228,13 +227,13 @@ def main():
     current_ip = get_ip()
     send_notify(f"Chương trình lấy chấm công đã được khởi động tại: {current_ip}")
     
-    # Thiết lập trigger cho các thời điểm
+    
     schedule.every().day.at("09:00").do(lambda: job(9))
-    schedule.every().day.at("15:19").do(lambda: job(14))
+    schedule.every().day.at("14:00").do(lambda: job(14))
     schedule.every().day.at("18:00").do(lambda: job(18))
     schedule.every().day.at("20:00").do(lambda: job(20))
     
-    # Trigger monthly job lúc 09:05 hàng ngày
+    
     schedule.every().day.at("09:05").do(monthly_job)
     
     while True:

@@ -19,7 +19,7 @@ COPYRIGHT = "Kai © v3.3"
 
 # Mặc định của nguồn Bình Thuận và Ninh Thuận
 DEFAULT_BINH_THUAN_IP = "113.162.244.51"   # sẽ thay đổi qua input
-DEFAULT_NINH_THUAN_IP = "14.179.55.199"      # sẽ thay đổi qua input
+DEFAULT_NINH_THUAN_IP = "14.227.240.34"      # sẽ thay đổi qua input
 # Các PORT mặc định, sẽ thay đổi qua input
 DEFAULT_BINH_THUAN_PORT = 24370  
 DEFAULT_NINH_THUAN_PORT = 4370
@@ -48,7 +48,7 @@ port_binhthuan_var = tk.IntVar()
 port_binhthuan_var.set(DEFAULT_BINH_THUAN_PORT)
 # IP, PORT Ninh Thuận
 ip_ninhthuan_var = tk.StringVar()
-ip_ninhthuan_var.set("")  # nếu để trống thì sẽ gọi get_second_ip()
+ip_ninhthuan_var.set(DEFAULT_NINH_THUAN_IP)  # nếu để trống thì sẽ gọi get_second_ip()
 port_ninhthuan_var = tk.IntVar()
 port_ninhthuan_var.set(DEFAULT_NINH_THUAN_PORT)
 # Base Token và Table ID
@@ -56,7 +56,6 @@ base_token_var = tk.StringVar()
 base_token_var.set("CeSDbFSWvaRjAgsmCWclZ0UEgpc")
 table_id_var = tk.StringVar()
 table_id_var.set("tbliO12qpcXtPPc1")
-# Checkbox Xoá dữ liệu: nếu check thì remove = 1, không check = 0.
 remove_var = tk.IntVar()
 remove_var.set(1)
 
@@ -165,7 +164,7 @@ def get_batch_data():
         attendance1, users1 = get_data_from_device(ip_bt, port_bt, prefix="")
         attendance2, users2 = get_data_from_device(ip_nt, port_nt, prefix="NT")
         attendance = attendance1 + attendance2
-        # Gom hợp users theo user_id
+        
         combined_users = {user.user_id: user for user in (users1 + users2)}.values()
 
     records = {}
@@ -435,7 +434,7 @@ table_id_label.grid(row=6, column=0, padx=5, pady=5, sticky="w")
 table_id_entry = ttk.Entry(setup_frame, textvariable=table_id_var, font=("Arial", 12), width=50)
 table_id_entry.grid(row=6, column=1, padx=5, pady=5)
 # Checkbox Xoá dữ liệu
-remove_checkbox = ttk.Checkbutton(setup_frame, text="Xoá dữ liệu (remove=1)", variable=remove_var)
+remove_checkbox = ttk.Checkbutton(setup_frame, text="Xoá dữ liệu", variable=remove_var)
 remove_checkbox.grid(row=7, column=0, padx=5, pady=5, sticky="w")
 
 # Ẩn ban đầu
