@@ -40,7 +40,7 @@ stop_event = threading.Event()
 root = tk.Tk()
 # API gửi data
 api_url_var = tk.StringVar()
-api_url_var.set("https://open-sg.larksuite.com/anycross/trigger/callback/MDFiOGNkYjU3M2YxMWNkM2RlODlmOWY3OGZmYjE3N2Yw")
+api_url_var.set("https://open-sg.larksuite.com/anycross/trigger/callback/MDA3YjJlZTE0MGEzMDllZmY3YzVjNjI3M2RmZTgwYmVj")
 # IP, PORT Bình Thuận
 ip_binhthuan_var = tk.StringVar()
 ip_binhthuan_var.set(DEFAULT_BINH_THUAN_IP)

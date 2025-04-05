@@ -234,7 +234,7 @@ def main():
     schedule.every().day.at("20:00").do(lambda: job(20))
     
     
-    schedule.every().day.at("09:05").do(monthly_job)
+    schedule.every().day.at("01:00").do(monthly_job)
     
     while True:
         schedule.run_pending()
