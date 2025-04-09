@@ -19,12 +19,12 @@ TABLE_ID_MONTHLY = "tbleADv6H7H0olJo"
 
 IP = "172.16.17.106"
 PORT = 4370
-DEFAULT_SECOND_IP = "14.179.55.199"
+DEFAULT_SECOND_IP = "14.227.240.34"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
 
 
-SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
+SECOND_IP_API = "https://endpoint.binhthuanford.com/api/system/get_ip_nt"
 
 def get_ip():
     try:

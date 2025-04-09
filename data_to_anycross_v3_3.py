@@ -243,14 +243,19 @@ def open_file_folder():
     try:
         if sys.platform.startswith('win'):
             os.startfile(os.getcwd())
-        elif sys.platform.startswith('darwin'):
-            subprocess.call(["open", os.getcwd()])
+        elif sys.platform.startswith('darwin'):  # macOS
+            try:
+                subprocess.run(["open", os.getcwd()], check=True)
+                log_box.insert(tk.END, "\n• Mở thành công thư mục chứa file.")
+            except subprocess.SubprocessError as e:
+                log_box.insert(tk.END, f"\n• Lỗi khi mở thư mục: {e}")
+                log_box.update()
         else:
             subprocess.call(["xdg-open", os.getcwd()])
         log_box.insert(tk.END, "\n• Mở thành công thư mục chứa file.")
     except Exception as e:
-        log_box.insert(tk.END, f"\n• Mở thư mục chứa file thất bại: {e}")
-    log_box.update()
+        log_box.insert(tk.END, f"\n• Lỗi khi mở thư mục: {e}")
+        log_box.update()
 
 def on_date_select(event, start_date_cal, end_date_cal):
     global start_date, end_date
@@ -386,7 +391,7 @@ button_frame1 = ttk.Frame(root)
 button_frame1.grid(row=3, column=0, columnspan=5, padx=10, pady=10)
 start_button = ttk.Button(button_frame1, text="Bắt đầu", width=20, command=start_process)
 start_button.grid(row=0, column=0, padx=5)
-open_folder_button = ttk.Button(button_frame1, text="Mở thư mục", width=20, command=lambda: os.startfile(os.getcwd()))
+open_folder_button = ttk.Button(button_frame1, text="Mở thư mục", width=20, command=open_file_folder)
 open_folder_button.grid(row=0, column=1, padx=5)
 
 button_frame2 = ttk.Frame(root)
