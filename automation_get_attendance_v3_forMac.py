@@ -17,14 +17,14 @@ TABLE_ID_20 = "tblIde0y5kgOeRXr"
 TABLE_ID_MONTHLY = "tbleADv6H7H0olJo"
 
 
-IP = "172.16.17.106"
-PORT = 4370
+IP = "113.162.244.51"
+PORT = 24370
 DEFAULT_SECOND_IP = "14.227.240.34"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
 
 
-SECOND_IP_API = "https://endpoint.binhthuanford.com/api/system/get_ip_nt"
+SECOND_IP_API = "https://endpoint.binhthuanford.com/api/get_ip_nt"
 
 def get_ip():
     try:
@@ -200,8 +200,8 @@ def job(target_hour):
     end_date = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
     
     
-    if target_hour in [9, 14, 18]:
-        step = {9: "1", 14: "2", 18: "3"}[target_hour]
+    if target_hour in [9, 14, 19]:
+        step = {9: "1", 14: "2", 19: "3"}[target_hour]
         table_id = TABLE_ID_COMMON
         remove = 1
         common = 1
@@ -230,7 +230,7 @@ def main():
     
     schedule.every().day.at("09:00").do(lambda: job(9))
     schedule.every().day.at("14:00").do(lambda: job(14))
-    schedule.every().day.at("18:00").do(lambda: job(18))
+    schedule.every().day.at("19:00").do(lambda: job(19))
     schedule.every().day.at("20:00").do(lambda: job(20))
     
     
