@@ -20,6 +20,10 @@ end_date = None
 # Thêm biến để theo dõi trạng thái
 is_fetching = False
 
+# Thêm biến StringVar để lưu giá trị TableId và BaseToken
+table_id_var = tk.StringVar(value="tbl5hYqhXtSJyngV")
+base_token_var = tk.StringVar(value="DwYubVFfcaMFzAsOmzvlD5B8gFe")
+
 # Thay đổi cấu hình lưới cho layout 2 cột
 root.grid_columnconfigure(0, weight=1)  # Cột trái (Log box)
 root.grid_columnconfigure(1, weight=1)  # Cột phải (Các điều khiển)
@@ -167,16 +171,30 @@ manual_date_frame.pack(fill="x", padx=5, pady=5)
 start_date_label = ttk.Label(manual_date_frame, text="Từ ngày:", font=("Arial", 9))
 start_date_label.pack(side=tk.LEFT, padx=5, pady=5)
 
-start_date_picker = DateEntry(manual_date_frame, width=12, background='darkblue',
-                             foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+start_date_picker = DateEntry(
+    manual_date_frame, 
+    width=12, 
+    background='darkblue',
+    foreground='white', 
+    borderwidth=2, 
+    date_pattern='dd/mm/yyyy',
+    selectmode='day'
+)
 start_date_picker.pack(side=tk.LEFT, padx=5, pady=5)
 
 # Label và DateEntry cho ngày kết thúc
 end_date_label = ttk.Label(manual_date_frame, text="Đến ngày:", font=("Arial", 9))
 end_date_label.pack(side=tk.LEFT, padx=5, pady=5)
 
-end_date_picker = DateEntry(manual_date_frame, width=12, background='darkblue',
-                           foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+end_date_picker = DateEntry(
+    manual_date_frame, 
+    width=12, 
+    background='darkblue',
+    foreground='white', 
+    borderwidth=2, 
+    date_pattern='dd/mm/yyyy',
+    selectmode='day'
+)
 end_date_picker.pack(side=tk.LEFT, padx=5, pady=5)
 
 # Nút áp dụng khoảng thời gian
@@ -199,6 +217,25 @@ date_range_label.pack(fill="x", padx=5, pady=5)
 button_frame = ttk.Frame(right_frame, padding="10")
 button_frame.pack(fill="x", pady=10, padx=5, anchor="center")
 
+# Thêm frame chứa thông tin cấu hình sau date_frame và trước button_frame
+config_frame = ttk.LabelFrame(right_frame, text="Cấu hình kết nối", padding="10")
+config_frame.pack(fill="x", pady=10, padx=5, anchor="center")
+
+base_token_label = ttk.Label(config_frame, text="Base:", font=("Arial", 9))
+base_token_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+base_token_entry = ttk.Entry(config_frame, textvariable=base_token_var, width=30)
+base_token_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+# Thêm các trường nhập cho TableId và BaseToken
+table_id_label = ttk.Label(config_frame, text="Bảng:", font=("Arial", 9))
+table_id_label.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+table_id_entry = ttk.Entry(config_frame, textvariable=table_id_var, width=30)
+table_id_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+
+# Cấu hình cho grid layout trong config_frame
+config_frame.columnconfigure(1, weight=1)
+
 # Cập nhật hàm xử lý nút Facebook Ads
 def get_facebook_ads_data():
     global is_fetching
@@ -220,7 +257,9 @@ def get_facebook_ads_data():
         if start_date and end_date:
             data = {
                 "start": start_date.strftime("%d/%m/%Y"),
-                "end": end_date.strftime("%d/%m/%Y")
+                "end": end_date.strftime("%d/%m/%Y"),
+                "table_id": table_id_var.get(),
+                "base_token": base_token_var.get()
             }
         
         try:
@@ -301,6 +340,26 @@ version_label.pack(anchor="center")
 
 # Khởi tạo mặc định là tháng hiện tại
 set_current_month()
+
+# Thêm cấu hình cho DateEntry nếu widget tiếp tục đóng nhanh
+def fix_date_picker():
+    # Cấu hình thêm để ngăn widget đóng quá nhanh
+    for widget in [start_date_picker, end_date_picker]:
+        cal = widget._top_cal if hasattr(widget, '_top_cal') else None
+        if cal:
+            # Thử thiết lập lại behavior khi ngày được chọn
+            cal.unbind("<<CalendarSelected>>")
+            def handle_calendar_select(event, widget=widget):
+                widget.selection_set(widget._calendar.selection_get())
+            cal.bind("<<CalendarSelected>>", handle_calendar_select)
+            
+            # Ngăn đóng tự động
+            def prevent_close(event):
+                return "break"
+            cal.bind("<Unmap>", prevent_close)
+
+# Gọi hàm này sau khi khởi tạo các widget
+fix_date_picker()
 
 # Chạy ứng dụng
 root.mainloop()
