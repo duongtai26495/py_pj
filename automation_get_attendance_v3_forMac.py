@@ -19,7 +19,7 @@ TABLE_ID_MONTHLY = "tbleADv6H7H0olJo"
 
 IP = "113.162.244.51"
 PORT = 24370
-DEFAULT_SECOND_IP = "14.227.240.34"
+DEFAULT_SECOND_IP = "14.160.216.230"
 SECOND_PORT = 4370
 SECOND_PREFIX = "NT"
 
@@ -112,7 +112,7 @@ def get_data_from_device(ip, port, prefix=""):
         if conn and conn.is_connect:
             try:
                 conn.disconnect()
-                send_notify(f"Đã ngắt kết nối máy {ip}:{port}")
+                print(f"Đã ngắt kết nối máy {ip}:{port}")
             except Exception as e:
                 send_notify(f"Lỗi khi ngắt kết nối máy {ip}:{port}: {e}")
 
@@ -177,7 +177,7 @@ def download_data_bg_combined(start_date, end_date, step, table_id, remove, comm
     else:
         print(f"Đã gửi {total_rows} bản ghi.")
         
-    send_notify(f"Quá trình xử lý hoàn tất. Đã tải dữ liệu từ {start_date.strftime('%d/%m/%Y %H:%M')} đến {end_date.strftime('%d/%m/%Y %H:%M')} lên base.")
+    print(f"Quá trình xử lý hoàn tất. Đã tải dữ liệu từ {start_date.strftime('%d/%m/%Y %H:%M')} đến {end_date.strftime('%d/%m/%Y %H:%M')} lên base.")
 
 def monthly_job():
     now = datetime.now()
